@@ -1,5 +1,5 @@
 # Creates dataset table, with the columns id, name, protein family, taxon, whether it is the
-# Example data, the session id and when it was created.
+# example data, the session id and when it was created.
 CREATE TABLE datasets (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	name VARCHAR(255),
@@ -9,7 +9,8 @@ CREATE TABLE datasets (
 	session_id VARCHAR(255),
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
+# Creates sequences table, with the columns id, dataset id, accession code, species, sequence and 
+# length. Foreign key to datasets table is used to ensure that the same dataset is being accessed.
 CREATE TABLE sequences (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	dataset_id INT,
@@ -19,7 +20,8 @@ CREATE TABLE sequences (
 	length INT,
 	FOREIGN KEY (dataset_id) REFERENCES datasets(id)
 );
-
+# Creates analysis table, with the columns id, dataset id, type of analysis, result path, when  it
+# was created. Again uses foreign key to datasets table for standardisation.
 CREATE TABLE analysis (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	dataset_id INT,
@@ -28,7 +30,8 @@ CREATE TABLE analysis (
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (dataset_id) REFERENCES datasets(id)
 );
-
+# Creates motifs table, with columns id, sequence id, motif name, start position and end position.
+# Foreign key to sequences table.
 CREATE TABLE motifs (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	sequence_id INT,
