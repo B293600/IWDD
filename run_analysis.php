@@ -8,10 +8,15 @@ require_once 'login.php';
 // ---------------------------
 // CONFIG
 // ---------------------------
-$tmpDir = __DIR__ . "/tmp";
+$workDir = sys_get_temp_dir() . "/bioinf_tmp";
+$webTmp  = __DIR__ . "/tmp";
 
-if (!is_dir($tmpDir)) {
-    mkdir($tmpDir, 0777, true);
+if (!is_dir($workDir)) {
+    mkdir($workDir, 0777, true);
+}
+
+if (!is_dir($webTmp)) {
+    mkdir($webTmp, 0777, true);
 }
 
 // ---------------------------
@@ -30,27 +35,22 @@ $analyses = array_map('strtolower', $analyses);
 // ---------------------------
 // FUNCTION: CACHE EXAMPLE MSA
 // ---------------------------
-function getExampleAlignment($pdo, $tmpDir) {
+function getExampleAlignment($pdo, $workDir, $webTmp) {
 
-    $alignedFile = $tmpDir . "/aligned_example.fasta";
+    $alignedFile = $webTmp . "/aligned_example.fasta";
 
-    // ✅ Use cached file if exists
     if (file_exists($alignedFile) && filesize($alignedFile) > 0) {
         return $alignedFile;
     }
 
     echo "<p>Generating example alignment (first time)...</p>";
 
-    // Fetch sequences
     $stmt = $pdo->query("SELECT sequence FROM aves_g6p");
     $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    if (empty($sequences)) {
-        die("Error: No sequences found in example dataset.");
-    }
+    $inputFile   = $workDir . "/example_input.fasta";
+    $tempAligned = $workDir . "/example_aligned.fasta";
 
-    // Write temp FASTA
-    $inputFile = $tmpDir . "/example_input.fasta";
     $fh = fopen($inputFile, "w");
 
     foreach ($sequences as $i => $seq) {
@@ -60,39 +60,35 @@ function getExampleAlignment($pdo, $tmpDir) {
 
     fclose($fh);
 
-    // Run fast Clustal Omega
-    $cmd = "clustalo -i " . escapeshellarg($inputFile) .
-           " -o " . escapeshellarg($alignedFile) .
+    $cmd = "/usr/bin/clustalo -i " . escapeshellarg($inputFile) .
+           " -o " . escapeshellarg($tempAligned) .
            " --force --threads=4 --iterations=1 2>&1";
 
-    $output = shell_exec($cmd);
+    shell_exec($cmd);
 
-    if (!file_exists($alignedFile)) {
-        echo "<pre>$output</pre>";
+    if (!file_exists($tempAligned)) {
         die("Error: Failed to generate example alignment.");
     }
+
+    copy($tempAligned, $alignedFile);
 
     return $alignedFile;
 }
 
 // ---------------------------
-// LOAD / CREATE DATASET
+// LOAD SEQUENCES
 // ---------------------------
 $sequences = [];
 
 if ($mode === 'existing') {
 
     if ($dataset === 'example') {
-
         $stmt = $pdo->query("SELECT sequence FROM aves_g6p");
         $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
     } elseif ($dataset === 'user') {
-
         if (empty($job_id)) {
             die("Error: Job ID required.");
         }
-
         $stmt = $pdo->prepare("SELECT sequence FROM sequences WHERE job_id = ?");
         $stmt->execute([$job_id]);
         $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -104,6 +100,8 @@ if ($mode === 'existing') {
     $taxon   = $_POST['taxon_query'] ?? '';
     $max_seq = $_POST['max_seq'] ?? 50;
 
+    $email = "your_email@example.com"; // 🔴 replace
+
     if (empty($protein) || empty($taxon)) {
         die("Error: Protein and taxon required.");
     }
@@ -113,47 +111,58 @@ if ($mode === 'existing') {
     $query = urlencode("$protein AND $taxon");
 
     $esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
-        . "db=protein&term=$query&retmax=$max_seq&retmode=json";
+                 . "db=protein&term=$query&retmax=$max_seq&retmode=json"
+                 . "&email=" . urlencode($email)
+                 . "&tool=protein_analysis_app";
 
-    $esearch_data = json_decode(file_get_contents($esearch_url), true);
-    $id_list = $esearch_data['esearchresult']['idlist'] ?? [];
+    $esearch = json_decode(file_get_contents($esearch_url), true);
+    $ids = $esearch['esearchresult']['idlist'] ?? [];
 
-    if (empty($id_list)) {
+    if (empty($ids)) {
         die("Error: No sequences found.");
     }
 
     sleep(1);
 
-    $ids = implode(",", $id_list);
-
     $efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?"
-        . "db=protein&id=$ids&rettype=fasta&retmode=text";
+                . "db=protein&id=" . implode(",", $ids)
+                . "&rettype=fasta&retmode=text"
+                . "&email=" . urlencode($email)
+                . "&tool=protein_analysis_app";
 
-    $fasta_data = file_get_contents($efetch_url);
+    $fasta = file_get_contents($efetch_url);
 
-    $lines = explode("\n", trim($fasta_data));
-    $current_seq = "";
+    if (!$fasta) {
+        die("Error fetching FASTA.");
+    }
+
+    $lines = explode("\n", $fasta);
+    $seq = "";
 
     foreach ($lines as $line) {
-        if (strpos($line, ">") === 0) {
-            if (!empty($current_seq)) {
-                $sequences[] = $current_seq;
-                $current_seq = "";
+
+        $line = trim($line);
+
+        if ($line === "") continue;
+
+        if ($line[0] === ">") {
+            if ($seq !== "") {
+                $sequences[] = $seq;
+                $seq = "";
             }
         } else {
-            $current_seq .= trim($line);
+            $seq .= $line;
         }
     }
 
-    if (!empty($current_seq)) {
-        $sequences[] = $current_seq;
+    if ($seq !== "") {
+        $sequences[] = $seq;
     }
 
-    // Store
     $stmt = $pdo->prepare("INSERT INTO sequences (dataset, job_id, sequence) VALUES (?, ?, ?)");
 
-    foreach ($sequences as $seq) {
-        $stmt->execute([$protein, $job_id, $seq]);
+    foreach ($sequences as $s) {
+        $stmt->execute([$protein, $job_id, $s]);
     }
 
     echo "<p><strong>New dataset created.</strong></p>";
@@ -168,9 +177,9 @@ if (empty($sequences)) {
 }
 
 // ---------------------------
-// WRITE FASTA (for non-example datasets)
+// WRITE FASTA
 // ---------------------------
-$inputFile = $tmpDir . "/input.fasta";
+$inputFile = $workDir . "/input.fasta";
 
 $fh = fopen($inputFile, "w");
 foreach ($sequences as $i => $seq) {
@@ -179,33 +188,35 @@ foreach ($sequences as $i => $seq) {
 }
 fclose($fh);
 
+// ---------------------------
+// OUTPUT HEADER
+// ---------------------------
 echo "<h2>Analysis Results</h2>";
-echo "<p><strong>Sequences used:</strong> " . count($sequences) . "</p>";
+echo "<p><strong>Sequences:</strong> " . count($sequences) . "</p>";
+
+// ---------------------------
+// TRACK ALIGNMENT
+// ---------------------------
+$currentAlignmentFile = null;
 
 // ---------------------------
 // ANALYSES
 // ---------------------------
 foreach ($analyses as $analysis) {
 
-    echo "<hr>";
-    echo "<h3>" . ucfirst($analysis) . "</h3>";
+    echo "<hr><h3>" . ucfirst($analysis) . "</h3>";
 
     switch ($analysis) {
 
         case 'alignment':
 
             if ($mode === 'existing' && $dataset === 'example') {
-
-                // ✅ USE CACHED MSA
-                $alignedFile = getExampleAlignment($pdo, $tmpDir);
+                $alignedFile = getExampleAlignment($pdo, $workDir, $webTmp);
                 echo "<p>Using cached example alignment.</p>";
-
             } else {
+                $alignedFile = $workDir . "/aligned.fasta";
 
-                // 🔥 NORMAL MSA
-                $alignedFile = $tmpDir . "/aligned.fasta";
-
-                $cmd = "clustalo -i " . escapeshellarg($inputFile) .
+                $cmd = "/usr/bin/clustalo -i " . escapeshellarg($inputFile) .
                        " -o " . escapeshellarg($alignedFile) .
                        " --force --threads=4 --iterations=1 2>&1";
 
@@ -213,54 +224,72 @@ foreach ($analyses as $analysis) {
             }
 
             if (file_exists($alignedFile)) {
+                $currentAlignmentFile = $alignedFile;
                 echo "<pre>" . htmlspecialchars(file_get_contents($alignedFile)) . "</pre>";
             } else {
                 echo "<p>Alignment failed.</p>";
+                echo "<pre>$output</pre>";
             }
 
             break;
 
-        // (keep your other analyses unchanged)
+        case 'conservation':
 
-        default:
-            echo "<p>No valid analysis selected: " . htmlspecialchars($analysis) . "</p>";
+            if (!$currentAlignmentFile || !file_exists($currentAlignmentFile)) {
+                echo "<p>Error: alignment must be run first.</p>";
+                break;
+            }
+
+            $plotTemp = $workDir . "/plotcon";
+            $plotWeb  = $webTmp . "/plotcon.png";
+
+            $cmd = "/usr/bin/plotcon -sequence " . escapeshellarg($currentAlignmentFile) .
+                   " -graph png -goutfile " . escapeshellarg($plotTemp) .
+                   " -winsize 4 -auto 2>&1";
+
+            $output = shell_exec($cmd);
+
+            $files = glob($workDir . "/plotcon*.png");
+
+            if (!empty($files)) {
+                copy($files[0], $plotWeb);
+                echo "<img src='tmp/plotcon.png?" . time() . "'>";
+            } else {
+                echo "<p>Conservation plot failed.</p>";
+                echo "<pre>$output</pre>";
+            }
+
+            break;
+
+        case 'motifs':
+
+            $motifTemp = $workDir . "/motifs.txt";
+            $motifWeb  = $webTmp . "/motifs.txt";
+
+            $cmd = "/usr/bin/patmatmotifs -sequence " . escapeshellarg($inputFile) .
+                   " -outfile " . escapeshellarg($motifTemp) . " 2>&1";
+
+            $output = shell_exec($cmd);
+
+            if (file_exists($motifTemp)) {
+                copy($motifTemp, $motifWeb);
+                echo "<pre>" . htmlspecialchars(file_get_contents($motifWeb)) . "</pre>";
+            } else {
+                echo "<p>Motif scan failed.</p>";
+                echo "<pre>$output</pre>";
+            }
+
+            break;
+
+        case 'length':
+
+            $lengths = array_map('strlen', $sequences);
+            echo "<p>Average: " . round(array_sum($lengths)/count($lengths),2) . "</p>";
+            echo "<p>Min: " . min($lengths) . "</p>";
+            echo "<p>Max: " . max($lengths) . "</p>";
+            break;
     }
 }
 
-// ---------------------------
-// BACK BUTTON
-// ---------------------------
-echo "
-<br><br>
-<style>
-.back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    background-color: #6A1FD1;
-    color: #ffffff;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
-    box-shadow: 0 4px 10px rgba(106, 31, 209, 0.35);
-    transition: all 0.25s ease;
-}
-
-.back-btn:hover {
-    background-color: #5518A8;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(106, 31, 209, 0.45);
-}
-
-.back-btn:active {
-    transform: translateY(0px);
-    box-shadow: 0 3px 8px rgba(106, 31, 209, 0.3);
-}
-</style>
-
-<a href='analysis_UI.php' class='back-btn'>
-    ← Back to Analysis
-</a>
-";
+echo "<br><br><a href='analysis_UI.php'>← Back</a>";
 ?>
