@@ -274,14 +274,14 @@ html {
 
 .back-to-top {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 10px 14px;
+    bottom: 40px;
+    right: 40px;
+    padding: 25px 35px;
     background-color: #111827;
     color: #fff;
     text-decoration: none;
     border-radius: 50px;
-    font-size: 14px;
+    font-size: 40px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     transition: all 0.2s ease;
 }
