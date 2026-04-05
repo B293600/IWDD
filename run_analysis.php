@@ -291,5 +291,38 @@ foreach ($analyses as $analysis) {
     }
 }
 
-echo "<br><br><a href='analysis_UI.php'>← Back</a>";
+echo "
+<br><br>
+<style>
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background-color: #6A1FD1;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(106, 31, 209, 0.35);
+    transition: all 0.25s ease;
+}
+
+.back-btn:hover {
+    background-color: #5518A8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(106, 31, 209, 0.45);
+}
+
+.back-btn:active {
+    transform: translateY(0px);
+    box-shadow: 0 3px 8px rgba(106, 31, 209, 0.3);
+}
+</style>
+
+<a href='analysis_UI.php' class='back-btn'>
+    ← Back to Analysis
+</a>
+";
+
 ?>
