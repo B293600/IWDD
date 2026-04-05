@@ -2,35 +2,160 @@
 <html>
 <head>
     <title>Processing...</title>
+
+    <!-- Global stylesheet -->
+    <link rel="stylesheet" href="style_sheet.css">
+
     <style>
         body {
+            margin: 0;
             font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 100px;
+            background: #f4f6f9;
         }
 
-        .spinner {
-            border: 6px solid #f3f3f3;
-            border-top: 6px solid #6A1FD1;
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 80vh;
+        }
+
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            width: 520px;
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-bar-inner {
+            height: 100%;
+            width: 0%;
+            background: #6A1FD1;
+            transition: width 0.5s ease;
+        }
+
+        /* Steps */
+        .steps {
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            color: #9ca3af;
+            transition: all 0.4s ease;
+        }
+
+        .step.active {
+            color: #6A1FD1;
+            font-weight: bold;
+        }
+
+        .step.completed {
+            color: #4b5563;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            margin-right: 12px;
+            background: #d1d5db;
+            transition: all 0.4s ease;
+        }
+
+        .step.active .dot {
+            background: #6A1FD1;
+            animation: pulse 1s infinite;
+        }
+
+        .step.completed .dot {
+            background: #6A1FD1;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Spinner accent */
+        .spinner {
+            margin: 15px auto;
+            width: 35px;
+            height: 35px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #6A1FD1;
+            border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
+
     </style>
 </head>
+
 <body>
 
-<h2>Processing your request...</h2>
-<div class="spinner"></div>
-<p>This may take a few moments (NCBI fetch + analysis running).</p>
+<!-- Navbar -->
+<div class="navbar">
+    <a href="index.php">Home</a>
+    <a href="aves.php">Example Dataset</a>
+    <a href="analysis_UI.php">Input Page</a>
+    <a href="credits.php">Credit Page</a>
+    <a href="about.php">About</a>
+    <a href="help.php">Help</a>
+</div>
 
+<div class="container">
+    <div class="card">
+        <h2>Processing Your Analysis</h2>
+        <div class="subtitle">Please wait while we prepare your results</div>
+
+        <div class="spinner"></div>
+
+        <!-- Progress bar -->
+        <div class="progress-bar">
+            <div class="progress-bar-inner" id="progressBar"></div>
+        </div>
+
+        <!-- Steps -->
+        <div class="steps">
+            <div class="step" id="step1"><div class="dot"></div>Fetching NCBI data</div>
+            <div class="step" id="step2"><div class="dot"></div>Parsing sequences</div>
+            <div class="step" id="step3"><div class="dot"></div>Running analysis</div>
+            <div class="step" id="step4"><div class="dot"></div>Generating results</div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form -->
 <form id="autoForm" method="POST" action="run_analysis.php">
     <?php
     foreach ($_POST as $key => $value) {
@@ -46,7 +171,51 @@
 </form>
 
 <script>
-document.getElementById("autoForm").submit();
+const steps = [
+    document.getElementById("step1"),
+    document.getElementById("step2"),
+    document.getElementById("step3"),
+    document.getElementById("step4")
+];
+
+const progressBar = document.getElementById("progressBar");
+
+let currentStep = 0;
+
+function activateStep(index) {
+    if (index < steps.length) {
+        steps[index].classList.add("active");
+
+        if (index > 0) {
+            steps[index - 1].classList.remove("active");
+            steps[index - 1].classList.add("completed");
+        }
+
+        progressBar.style.width = ((index + 1) / steps.length * 100) + "%";
+    }
+}
+
+// Sequential animation
+function runSteps() {
+    const interval = setInterval(() => {
+        activateStep(currentStep);
+        currentStep++;
+
+        if (currentStep >= steps.length) {
+            clearInterval(interval);
+
+            // Mark last as completed
+            steps[steps.length - 1].classList.add("completed");
+
+            // Small delay before submitting
+            setTimeout(() => {
+                document.getElementById("autoForm").submit();
+            }, 800);
+        }
+    }, 800);
+}
+
+window.onload = runSteps;
 </script>
 
 </body>
