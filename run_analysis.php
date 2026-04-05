@@ -20,13 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $workDir = sys_get_temp_dir() . "/bioinf_tmp";
 $webTmp  = __DIR__ . "/tmp";
 
-if (!is_dir($workDir)) {
-    mkdir($workDir, 0777, true);
-}
-
-if (!is_dir($webTmp)) {
-    mkdir($webTmp, 0777, true);
-}
+if (!is_dir($workDir)) mkdir($workDir, 0777, true);
+if (!is_dir($webTmp)) mkdir($webTmp, 0777, true);
 
 // ---------------------------
 // INPUTS
@@ -36,13 +31,98 @@ $dataset = $_POST['dataset'] ?? null;
 $job_id  = $_POST['job_id'] ?? null;
 
 $analyses = $_POST['analysis'] ?? [];
-if (!is_array($analyses)) {
-    $analyses = [$analyses];
-}
+if (!is_array($analyses)) $analyses = [$analyses];
 $analyses = array_map('strtolower', $analyses);
 
 // ---------------------------
-// FUNCTION: CACHE EXAMPLE MSA
+// LOAD SEQUENCES
+// ---------------------------
+$sequences = [];
+
+if ($mode === 'existing') {
+
+    if ($dataset === 'example') {
+        $stmt = $pdo->query("SELECT sequence FROM aves_g6p");
+        $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } elseif ($dataset === 'user') {
+        if (empty($job_id)) die("Error: Job ID required.");
+        $stmt = $pdo->prepare("SELECT sequence FROM sequences WHERE job_id = ?");
+        $stmt->execute([$job_id]);
+        $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+} elseif ($mode === 'new') {
+
+    $protein = $_POST['protein_query'] ?? '';
+    $taxon   = $_POST['taxon_query'] ?? '';
+    $max_seq = $_POST['max_seq'] ?? 50;
+
+    if (empty($protein) || empty($taxon)) {
+        die("Error: Protein and taxon required.");
+    }
+
+    $job_id = uniqid("job_");
+    $query = urlencode("$protein AND $taxon");
+
+    $esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
+        . "db=protein&term=$query&retmax=$max_seq&retmode=json";
+
+    $esearch = json_decode(file_get_contents($esearch_url), true);
+    $ids = $esearch['esearchresult']['idlist'] ?? [];
+
+    if (empty($ids)) die("Error: No sequences found.");
+
+    $efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?"
+        . "db=protein&id=" . implode(",", $ids)
+        . "&rettype=fasta&retmode=text";
+
+    $fasta = file_get_contents($efetch_url);
+    if (!$fasta) die("Error fetching FASTA.");
+
+    $lines = explode("\n", $fasta);
+    $seq = "";
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === "") continue;
+
+        if ($line[0] === ">") {
+            if ($seq !== "") {
+                $sequences[] = $seq;
+                $seq = "";
+            }
+        } else {
+            $seq .= $line;
+        }
+    }
+
+    if ($seq !== "") $sequences[] = $seq;
+
+    $stmt = $pdo->prepare("INSERT INTO sequences (dataset, job_id, sequence) VALUES (?, ?, ?)");
+    foreach ($sequences as $s) $stmt->execute([$protein, $job_id, $s]);
+
+    echo "<p><strong>New dataset created.</strong><br>Job ID: $job_id</p>";
+}
+
+// ---------------------------
+// VALIDATION
+// ---------------------------
+if (empty($sequences)) die("Error: No sequences available.");
+
+// ---------------------------
+// WRITE FASTA
+// ---------------------------
+$inputFile = $workDir . "/input.fasta";
+$fh = fopen($inputFile, "w");
+
+foreach ($sequences as $i => $seq) {
+    fwrite($fh, ">seq_" . ($i + 1) . "\n");
+    fwrite($fh, wordwrap($seq, 60, "\n", true) . "\n");
+}
+fclose($fh);
+
+// ---------------------------
+// ALIGNMENT CACHE FUNCTION
 // ---------------------------
 function getExampleAlignment($pdo, $workDir, $webTmp) {
 
@@ -51,8 +131,6 @@ function getExampleAlignment($pdo, $workDir, $webTmp) {
     if (file_exists($alignedFile) && filesize($alignedFile) > 0) {
         return $alignedFile;
     }
-
-    echo "<p>Generating example alignment (first time)...</p>";
 
     $stmt = $pdo->query("SELECT sequence FROM aves_g6p");
     $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -84,223 +162,129 @@ function getExampleAlignment($pdo, $workDir, $webTmp) {
     return $alignedFile;
 }
 
-// ---------------------------
-// LOAD SEQUENCES
-// ---------------------------
-$sequences = [];
+?>
 
-if ($mode === 'existing') {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Analysis Results</title>
 
-    if ($dataset === 'example') {
-        $stmt = $pdo->query("SELECT sequence FROM aves_g6p");
-        $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    } elseif ($dataset === 'user') {
-        if (empty($job_id)) {
-            die("Error: Job ID required.");
-        }
-        $stmt = $pdo->prepare("SELECT sequence FROM sequences WHERE job_id = ?");
-        $stmt->execute([$job_id]);
-        $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    }
-
-} elseif ($mode === 'new') {
-
-    $protein = $_POST['protein_query'] ?? '';
-    $taxon   = $_POST['taxon_query'] ?? '';
-    $max_seq = $_POST['max_seq'] ?? 50;
-
-    $email = "s2328610@ed.ac.uk"; 
-
-    if (empty($protein) || empty($taxon)) {
-        die("Error: Protein and taxon required.");
-    }
-
-    $job_id = uniqid("job_");
-
-    $query = urlencode("$protein AND $taxon");
-
-    $esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
-                 . "db=protein&term=$query&retmax=$max_seq&retmode=json"
-                 . "&email=" . urlencode($email)
-                 . "&tool=protein_analysis_app";
-
-    $esearch = json_decode(file_get_contents($esearch_url), true);
-    $ids = $esearch['esearchresult']['idlist'] ?? [];
-
-    if (empty($ids)) {
-        die("Error: No sequences found.");
-    }
-
-    sleep(1);
-
-    $efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?"
-                . "db=protein&id=" . implode(",", $ids)
-                . "&rettype=fasta&retmode=text"
-                . "&email=" . urlencode($email)
-                . "&tool=protein_analysis_app";
-
-    $fasta = file_get_contents($efetch_url);
-
-    if (!$fasta) {
-        die("Error fetching FASTA.");
-    }
-
-    $lines = explode("\n", $fasta);
-    $seq = "";
-
-    foreach ($lines as $line) {
-
-        $line = trim($line);
-
-        if ($line === "") continue;
-
-        if ($line[0] === ">") {
-            if ($seq !== "") {
-                $sequences[] = $seq;
-                $seq = "";
-            }
-        } else {
-            $seq .= $line;
-        }
-    }
-
-    if ($seq !== "") {
-        $sequences[] = $seq;
-    }
-
-    $stmt = $pdo->prepare("INSERT INTO sequences (dataset, job_id, sequence) VALUES (?, ?, ?)");
-
-    foreach ($sequences as $s) {
-        $stmt->execute([$protein, $job_id, $s]);
-    }
-
-    echo "<p><strong>New dataset created.</strong></p>";
-    echo "<p><strong>Job ID:</strong> $job_id</p>";
-}
-
-// ---------------------------
-// VALIDATION
-// ---------------------------
-if (empty($sequences)) {
-    die("Error: No sequences available.");
-}
-
-// ---------------------------
-// WRITE FASTA
-// ---------------------------
-$inputFile = $workDir . "/input.fasta";
-
-$fh = fopen($inputFile, "w");
-foreach ($sequences as $i => $seq) {
-    fwrite($fh, ">seq_" . ($i + 1) . "\n");
-    fwrite($fh, wordwrap($seq, 60, "\n", true) . "\n");
-}
-fclose($fh);
-
-// ---------------------------
-// OUTPUT HEADER
-// ---------------------------
-echo "<h2 id='top'>Analysis Results</h2>";
-echo "<p><strong>Sequences:</strong> " . count($sequences) . "</p>";
-
-// ---------------------------
-// TOP BACK BUTTON
-// ---------------------------
-echo "<div style='margin-bottom:15px;'>
-<a href='analysis_UI.php' class='back-btn'>
-    ← Back to Analysis
-</a>
-</div>";
-
-// ---------------------------
-// NAVIGATION BUTTONS
-// ---------------------------
-echo "<div style='margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px;'>";
-foreach ($analyses as $analysis) {
-    $label = ucfirst($analysis);
-    echo "<a href='#$analysis' class='nav-btn'>$label</a>";
-}
-echo "</div>";
-
-// ---------------------------
-// STYLES
-// ---------------------------
-echo "
 <style>
-html {
-    scroll-behavior: smooth;
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 40px auto;
+    background: white;
+    padding: 35px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+h2 {
+    color: #5b21b6;
+}
+
+h3 {
+    color: #6d28d9;
+}
+
+.button-group {
+    margin: 20px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .nav-btn {
-    display: inline-block;
-    padding: 8px 14px;
-    background-color: #2d3748;
-    color: #ffffff;
+    padding: 10px 16px;
+    background: #6d28d9;
+    color: white;
     text-decoration: none;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: all 0.2s ease;
+    border-radius: 8px;
 }
 
 .nav-btn:hover {
-    background-color: #4a5568;
-    transform: translateY(-1px);
+    background: #5b21b6;
 }
 
 .back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    display: inline-block;
     padding: 10px 18px;
-    background-color: #6A1FD1;
-    color: #ffffff;
+    background: #7c3aed;
+    color: white;
     text-decoration: none;
     border-radius: 8px;
-    font-weight: 600;
-    box-shadow: 0 4px 10px rgba(106, 31, 209, 0.35);
-    transition: all 0.25s ease;
+    margin-bottom: 15px;
 }
 
 .back-btn:hover {
-    background-color: #5518A8;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(106, 31, 209, 0.45);
+    background: #6d28d9;
 }
 
-.back-btn:active {
-    transform: translateY(0px);
-    box-shadow: 0 3px 8px rgba(106, 31, 209, 0.3);
+pre {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    overflow-x: auto;
+    border-left: 4px solid #7c3aed;
 }
 
+hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 30px 0;
+}
+
+/* UPDATED BUTTON STYLE */
 .back-to-top {
     position: fixed;
-    bottom: 40px;
-    right: 40px;
-    padding: 25px 35px;
-    background-color: #111827;
-    color: #fff;
+    bottom: 30px;
+    right: 30px;
+    background: #7c3aed;
+    color: white;
+    padding: 16px 22px;
+    border-radius: 999px;
     text-decoration: none;
-    border-radius: 50px;
-    font-size: 40px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    transition: all 0.2s ease;
+    font-size: 18px;
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    transition: 0.2s ease;
 }
 
 .back-to-top:hover {
-    background-color: #374151;
-    transform: translateY(-2px);
+    background: #5b21b6;
+    transform: translateY(-3px);
 }
-</style>
-";
 
-// ---------------------------
-// TRACK ALIGNMENT
-// ---------------------------
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2 id="top">Analysis Results</h2>
+<p><strong>Sequences:</strong> <?= count($sequences) ?></p>
+
+<a href="analysis_UI.php" class="back-btn">← Back to Analysis</a>
+
+<div class="button-group">
+<?php foreach ($analyses as $analysis): ?>
+    <a href="#<?= $analysis ?>" class="nav-btn"><?= ucfirst($analysis) ?></a>
+<?php endforeach; ?>
+</div>
+
+<?php
+
 $currentAlignmentFile = null;
 
-// ---------------------------
-// ANALYSES
-// ---------------------------
 foreach ($analyses as $analysis) {
 
     echo "<hr id='$analysis'><h3>" . ucfirst($analysis) . "</h3>";
@@ -390,15 +374,14 @@ foreach ($analyses as $analysis) {
     }
 }
 
-// ---------------------------
-// BACK BUTTON + BACK TO TOP
-// ---------------------------
-echo "<br><br>
-<a href='analysis_UI.php' class='back-btn'>
-    ← Back to Analysis
-</a>
-
-<a href='#top' class='back-to-top'>↑ Top</a>
-";
-
 ?>
+
+<br><br>
+<a href="analysis_UI.php" class="back-btn">← Back to Analysis</a>
+
+<a href="#top" class="back-to-top">↑ Top</a>
+
+</div>
+
+</body>
+</html>
