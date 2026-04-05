@@ -1,3 +1,9 @@
+<?php
+session_start();
+
+$saved = $_SESSION['analysis_form'] ?? [];
+?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -17,13 +23,17 @@
 
 <h2>Protein Sequence Analysis</h2>
 
-<form action="run_analysis.php" method="POST">
+<form action="loading.php" method="POST">
 
     <!-- Mode Selection -->
     <h3>Select Mode</h3>
     <select name="mode" id="modeSelect" onchange="toggleMode()" required>
-        <option value="existing">Use Existing Dataset</option>
-        <option value="new">Create New Dataset (NCBI Query)</option>
+        <option value="existing" <?= ($saved['mode'] ?? 'existing') === 'existing' ? 'selected' : '' ?>>
+            Use Existing Dataset
+        </option>
+        <option value="new" <?= ($saved['mode'] ?? '') === 'new' ? 'selected' : '' ?>>
+            Create New Dataset (NCBI Query)
+        </option>
     </select>
 
     <br><br>
@@ -34,31 +44,42 @@
         <h3>Select Existing Dataset</h3>
 
         <select name="dataset">
-            <option value="example">Example Dataset (Glucose-6-phosphatase proteins from Aves)</option>
-            <option value="user">User Dataset (enter Job ID)</option>
+            <option value="example" <?= ($saved['dataset'] ?? '') === 'example' ? 'selected' : '' ?>>
+                Example Dataset (Glucose-6-phosphatase proteins from Aves)
+            </option>
+            <option value="user" <?= ($saved['dataset'] ?? '') === 'user' ? 'selected' : '' ?>>
+                User Dataset (enter Job ID)
+            </option>
         </select>
 
-        <div id="jobInput" style="display:none; margin-top:10px;">
+        <div id="jobInput" style="display: <?= ($saved['dataset'] ?? '') === 'user' ? 'block' : 'none' ?>; margin-top:10px;">
             <br>
             Enter Job ID:
-            <input type="text" name="job_id" placeholder="e.g. 12">
+            <input type="text" name="job_id"
+                   value="<?= htmlspecialchars($saved['job_id'] ?? '') ?>"
+                   placeholder="e.g. 12">
         </div>
 
     </div>
 
     <!-- ================= NEW DATASET ================= -->
-    <div id="newSection" style="display:none;">
+    <div id="newSection" style="display: <?= ($saved['mode'] ?? '') === 'new' ? 'block' : 'none' ?>;">
 
         <h3>Create New Dataset (NCBI Query)</h3>
 
         Protein family / keyword:<br>
-        <input type="text" name="protein_query" placeholder="e.g. kinase"><br><br>
+        <input type="text" name="protein_query"
+               value="<?= htmlspecialchars($saved['protein_query'] ?? '') ?>"
+               placeholder="e.g. kinase"><br><br>
 
         Taxonomic group:<br>
-        <input type="text" name="taxon_query" placeholder="e.g. Mammalia, Aves, Rodentia"><br><br>
+        <input type="text" name="taxon_query"
+               value="<?= htmlspecialchars($saved['taxon_query'] ?? '') ?>"
+               placeholder="e.g. Mammalia"><br><br>
 
-        Max sequences:<br>
-        <input type="number" name="max_seq" value="50"><br><br>
+        Max sequences: nb: Increasing this may drastically increase loading time <br>
+        <input type="number" name="max_seq"
+               value="<?= htmlspecialchars($saved['max_seq'] ?? '50') ?>"><br><br>
 
     </div>
 
@@ -67,26 +88,32 @@
     <!-- ================= ANALYSIS OPTIONS ================= -->
     <h3>Select Analyses (you can choose multiple)</h3>
 
+    <?php $savedAnalyses = $saved['analysis'] ?? []; ?>
+
     <label>
-        <input type="checkbox" name="analysis[]" value="length" checked>
+        <input type="checkbox" name="analysis[]" value="length"
+            <?= in_array('length', $savedAnalyses) ? 'checked' : '' ?>>
         Length Statistics
     </label>
     <br>
 
     <label>
-        <input type="checkbox" name="analysis[]" value="alignment">
+        <input type="checkbox" name="analysis[]" value="alignment"
+            <?= in_array('alignment', $savedAnalyses) ? 'checked' : '' ?>>
         Multiple Sequence Alignment
     </label>
     <br>
 
     <label>
-        <input type="checkbox" name="analysis[]" value="conservation">
+        <input type="checkbox" name="analysis[]" value="conservation"
+            <?= in_array('conservation', $savedAnalyses) ? 'checked' : '' ?>>
         Conservation Plot
     </label>
     <br>
 
     <label>
-        <input type="checkbox" name="analysis[]" value="motifs">
+        <input type="checkbox" name="analysis[]" value="motifs"
+            <?= in_array('motifs', $savedAnalyses) ? 'checked' : '' ?>>
         Motif Scan (PROSITE-style via EMBOSS)
     </label>
     <br>
@@ -112,7 +139,6 @@ function toggleMode() {
         newSection.style.display = "block";
     }
 
-    // Reset job input visibility when switching
     jobInput.style.display = "none";
 }
 
