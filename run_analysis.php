@@ -100,7 +100,7 @@ if ($mode === 'existing') {
     $taxon   = $_POST['taxon_query'] ?? '';
     $max_seq = $_POST['max_seq'] ?? 50;
 
-    $email = "your_email@example.com"; // 🔴 replace
+    $email = "s2328610@ed.ac.uk"; 
 
     if (empty($protein) || empty($taxon)) {
         die("Error: Protein and taxon required.");
