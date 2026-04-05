@@ -1,9 +1,18 @@
 <?php
 
+session_start();
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once 'login.php';
+
+// ---------------------------
+// STORE LAST INPUTS IN SESSION
+// ---------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $_SESSION['analysis_form'] = $_POST;
+}
 
 // ---------------------------
 // CONFIG
@@ -191,8 +200,98 @@ fclose($fh);
 // ---------------------------
 // OUTPUT HEADER
 // ---------------------------
-echo "<h2>Analysis Results</h2>";
+echo "<h2 id='top'>Analysis Results</h2>";
 echo "<p><strong>Sequences:</strong> " . count($sequences) . "</p>";
+
+// ---------------------------
+// TOP BACK BUTTON
+// ---------------------------
+echo "<div style='margin-bottom:15px;'>
+<a href='analysis_UI.php' class='back-btn'>
+    ← Back to Analysis
+</a>
+</div>";
+
+// ---------------------------
+// NAVIGATION BUTTONS
+// ---------------------------
+echo "<div style='margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px;'>";
+foreach ($analyses as $analysis) {
+    $label = ucfirst($analysis);
+    echo "<a href='#$analysis' class='nav-btn'>$label</a>";
+}
+echo "</div>";
+
+// ---------------------------
+// STYLES
+// ---------------------------
+echo "
+<style>
+html {
+    scroll-behavior: smooth;
+}
+
+.nav-btn {
+    display: inline-block;
+    padding: 8px 14px;
+    background-color: #2d3748;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+    background-color: #4a5568;
+    transform: translateY(-1px);
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background-color: #6A1FD1;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(106, 31, 209, 0.35);
+    transition: all 0.25s ease;
+}
+
+.back-btn:hover {
+    background-color: #5518A8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(106, 31, 209, 0.45);
+}
+
+.back-btn:active {
+    transform: translateY(0px);
+    box-shadow: 0 3px 8px rgba(106, 31, 209, 0.3);
+}
+
+.back-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 14px;
+    background-color: #111827;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 50px;
+    font-size: 14px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+}
+
+.back-to-top:hover {
+    background-color: #374151;
+    transform: translateY(-2px);
+}
+</style>
+";
 
 // ---------------------------
 // TRACK ALIGNMENT
@@ -204,7 +303,7 @@ $currentAlignmentFile = null;
 // ---------------------------
 foreach ($analyses as $analysis) {
 
-    echo "<hr><h3>" . ucfirst($analysis) . "</h3>";
+    echo "<hr id='$analysis'><h3>" . ucfirst($analysis) . "</h3>";
 
     switch ($analysis) {
 
@@ -291,38 +390,15 @@ foreach ($analyses as $analysis) {
     }
 }
 
-echo "
-<br><br>
-<style>
-.back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    background-color: #6A1FD1;
-    color: #ffffff;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
-    box-shadow: 0 4px 10px rgba(106, 31, 209, 0.35);
-    transition: all 0.25s ease;
-}
-
-.back-btn:hover {
-    background-color: #5518A8;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(106, 31, 209, 0.45);
-}
-
-.back-btn:active {
-    transform: translateY(0px);
-    box-shadow: 0 3px 8px rgba(106, 31, 209, 0.3);
-}
-</style>
-
+// ---------------------------
+// BACK BUTTON + BACK TO TOP
+// ---------------------------
+echo "<br><br>
 <a href='analysis_UI.php' class='back-btn'>
     ← Back to Analysis
 </a>
+
+<a href='#top' class='back-to-top'>↑ Top</a>
 ";
 
 ?>
