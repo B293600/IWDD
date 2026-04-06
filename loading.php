@@ -118,6 +118,22 @@
             to { transform: rotate(360deg); }
         }
 
+        /* ✅ Cancel button */
+        .cancel-btn {
+            margin-top: 20px;
+            padding: 10px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .cancel-btn:hover {
+            background: #dc2626;
+        }
+
     </style>
 </head>
 
@@ -152,6 +168,10 @@
             <div class="step" id="step3"><div class="dot"></div>Running analysis</div>
             <div class="step" id="step4"><div class="dot"></div>Generating results</div>
         </div>
+
+        <!-- ✅ Cancel Button -->
+        <button class="cancel-btn" onclick="cancelJob()">Cancel Job</button>
+
     </div>
 </div>
 
@@ -171,6 +191,19 @@
 </form>
 
 <script>
+let cancelled = false;
+
+function cancelJob() {
+    cancelled = true;
+
+    fetch("cancel_job.php", {
+        method: "POST"
+    }).then(() => {
+        alert("Job cancelled.");
+        window.location.href = "analysis_UI.php";
+    });
+}
+
 const steps = [
     document.getElementById("step1"),
     document.getElementById("step2"),
@@ -195,23 +228,29 @@ function activateStep(index) {
     }
 }
 
-// Sequential animation
 function runSteps() {
     const interval = setInterval(() => {
+
+        if (cancelled) {
+            clearInterval(interval);
+            return;
+        }
+
         activateStep(currentStep);
         currentStep++;
 
         if (currentStep >= steps.length) {
             clearInterval(interval);
 
-            // Mark last as completed
             steps[steps.length - 1].classList.add("completed");
 
-            // Small delay before submitting
             setTimeout(() => {
-                document.getElementById("autoForm").submit();
+                if (!cancelled) {
+                    document.getElementById("autoForm").submit();
+                }
             }, 800);
         }
+
     }, 800);
 }
 
