@@ -1,34 +1,35 @@
 <?php
+// Creates output buffering and PHP session handling, processes form submission, store user information in session
 ob_start();
 session_start();
-
+// Logs into MySQL database, contains PDO 
 require_once 'login.php';
 
-// Initialize error
+// Create error message variable
 $error = "";
 
-// Handle form submission
+// Handles form submission, runs when user submits the login form (or skips)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
+// Validates input and stores user details in the session
     if (isset($_POST['login'])) {
         $fn = trim($_POST['fn'] ?? '');
         $sn = trim($_POST['sn'] ?? '');
 
         if (!empty($fn)) {
 
-            // Store both individual and combined values
+            // Stores user information in session and redirect to homepage
             $_SESSION['fn'] = $fn;
             $_SESSION['sn'] = $sn;
             $_SESSION['user'] = $fn . ' ' . $sn;
 
             header("Location: index.php");
             exit();
-
+// Sets error message
         } else {
             $error = "First name is required.";
         }
     }
-
+// Handles skip button, assignes a default Guest user
     if (isset($_POST['skip'])) {
         $_SESSION['user'] = "Guest";
 
@@ -45,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Login</title>
 
     <link rel="stylesheet" href="style_sheet.css">
-
+<!-- Contains layout and styling of login page -->
     <style>
         .login-container {
             display: flex;
@@ -95,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 
 <body>
-
+<!-- Main login interface container -->
 <div class="login-container">
     <div class="login-card">
         <h2>Login</h2>
@@ -104,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if (!empty($error)) : ?>
             <div class="error"><?php echo $error; ?></div>
         <?php endif; ?>
-
+<!-- Creates form -->
         <form action="web_login.php" method="post">
             <input type="text" name="fn" placeholder="First Name">
             <input type="text" name="sn" placeholder="Second Name">
@@ -119,5 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </html>
 
 <?php
+// Flush output buffer and send content to the browser
 ob_end_flush();
 ?>
