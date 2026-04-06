@@ -31,8 +31,15 @@ session_start();
             animation: fadeIn 1.5s ease-in-out;
         }
 
+        .site-title {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
         .hero-content h1 {
-            font-size: 3rem;
+            font-size: 2.2rem;
             margin-bottom: 10px;
         }
 
@@ -101,7 +108,6 @@ session_start();
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Button styling override for hero button */
         .hero-button {
             display: inline-block;
             margin-top: 20px;
@@ -128,6 +134,10 @@ session_start();
 <!-- Hero Section -->
 <div class="hero">
     <div class="hero-content">
+
+        <!-- Site Name Added Here -->
+        <div class="site-title">ProteinQuery</div>
+
         <h1>
             <?php
             if (isset($_SESSION['fn']) && isset($_SESSION['sn'])) {
@@ -142,10 +152,10 @@ session_start();
 
         <p>Analyse, visualise, and explore protein sequences.</p>
 
-        <!-- Button instead of link -->
         <form action="analysis_UI.php" method="get">
             <button type="submit" class="btn hero-button">Start Analysis</button>
         </form>
+
     </div>
 </div>
 
@@ -202,7 +212,7 @@ session_start();
 
 <!-- Footer -->
 <footer>
-    <p>Protein Analysis Tool</p>
+    <p>Protein Analysis Tool - ProteinQuery</p>
 </footer>
 
 </body>
