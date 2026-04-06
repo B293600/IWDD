@@ -155,6 +155,11 @@ require_once 'login.php';
         <li>Glob — <a href="https://www.w3schools.com/php/func_filesystem_glob.asp" target="_blank">https://www.w3schools.com/php/func_filesystem_glob.asp</a></li>
         <li>PDO prepared statements — <a href="https://www.w3schools.com/php/php_mysql_prepared_statements.asp" target="_blank">https://www.w3schools.com/php/php_mysql_prepared_statements.asp</a></li>
         <li>Shell exec — <a href="https://www.php.net/manual/en/function.shell-exec.php" target="_blank">https://www.php.net/manual/en/function.shell-exec.php</a></li>
+        <li>Connect to MySQL — <a href="https://www.w3schools.com/php/php_mysql_connect.asp" target="_blank">https://www.w3schools.com/php/php_mysql_connect.asp</a></li>
+        <li>PHP file handling — <a href="https://www.w3schools.com/php/php_file.asp" target="_blank">https://www.w3schools.com/php/php_file.asp</a></li>
+        <li>Error handling in PHP — <a href="https://www.w3schools.com/php/php_error.asp" target="_blank">https://www.w3schools.com/php/php_error.asp</a></li>
+        <li>PHP regular expressions — <a href="https://www.w3schools.com/php/php_regex.asp" target="_blank">https://www.w3schools.com/php/php_regex.asp</a></li>
+
 
         <!-- UI / Misc -->
         <li>Copy to clipboard — <a href="https://www.w3schools.com/howto/howto_js_copy_clipboard.asp" target="_blank">https://www.w3schools.com/howto/howto_js_copy_clipboard.asp</a></li>
