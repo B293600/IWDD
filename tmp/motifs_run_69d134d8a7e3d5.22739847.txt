@@ -1,0 +1,24 @@
+########################################
+# Program: patmatmotifs
+# Rundate: Sat  4 Apr 2026 16:57:12
+# Commandline: patmatmotifs
+#    -sequence /localdisk/home/s2328610/public_html/web_project/tmp/input_run_69d134d8a7e3d5.22739847.fasta
+#    -outfile /localdisk/home/s2328610/public_html/web_project/tmp/motifs_run_69d134d8a7e3d5.22739847.txt
+# Report_format: dbmotif
+# Report_file: /localdisk/home/s2328610/public_html/web_project/tmp/motifs_run_69d134d8a7e3d5.22739847.txt
+########################################
+
+#=======================================
+#
+# Sequence: seq_1     from: 1   to: 13
+# HitCount: 0
+#
+# Full: No
+# Prune: Yes
+# Data_file: /usr/share/EMBOSS/data/PROSITE/prosite.lines
+#
+#=======================================
+
+
+#---------------------------------------
+#---------------------------------------

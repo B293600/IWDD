@@ -1,7 +1,41 @@
 <?php
 ob_start();
 session_start();
+
 require_once 'login.php';
+
+// Initialize error
+$error = "";
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    if (isset($_POST['login'])) {
+        $fn = trim($_POST['fn'] ?? '');
+        $sn = trim($_POST['sn'] ?? '');
+
+        if (!empty($fn)) {
+
+            // Store both individual and combined values
+            $_SESSION['fn'] = $fn;
+            $_SESSION['sn'] = $sn;
+            $_SESSION['user'] = $fn . ' ' . $sn;
+
+            header("Location: index.php");
+            exit();
+
+        } else {
+            $error = "First name is required.";
+        }
+    }
+
+    if (isset($_POST['skip'])) {
+        $_SESSION['user'] = "Guest";
+
+        header("Location: index.php");
+        exit();
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -10,10 +44,8 @@ require_once 'login.php';
     <meta charset="UTF-8">
     <title>Login</title>
 
-    <!-- Global stylesheet -->
     <link rel="stylesheet" href="style_sheet.css">
 
-    <!-- Page-specific styling only -->
     <style>
         .login-container {
             display: flex;
@@ -30,16 +62,6 @@ require_once 'login.php';
             width: 320px;
             text-align: center;
             animation: fadeIn 0.8s ease-in-out;
-        }
-
-        .login-card h2 {
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            font-size: 14px;
-            color: #555;
-            margin-bottom: 20px;
         }
 
         .login-card input {
@@ -59,6 +81,12 @@ require_once 'login.php';
             background: #d1d5db;
         }
 
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -73,14 +101,15 @@ require_once 'login.php';
         <h2>Login</h2>
         <div class="subtitle">Enter your name to begin</div>
 
+        <?php if (!empty($error)) : ?>
+            <div class="error"><?php echo $error; ?></div>
+        <?php endif; ?>
+
         <form action="web_login.php" method="post">
             <input type="text" name="fn" placeholder="First Name">
             <input type="text" name="sn" placeholder="Second Name">
 
-            <!-- Uses global .btn class -->
             <input type="submit" name="login" value="Go" class="btn">
-
-            <!-- Uses global + local override -->
             <input type="submit" name="skip" value="Skip" class="btn btn-secondary">
         </form>
     </div>
