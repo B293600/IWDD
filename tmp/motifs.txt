@@ -1,6 +1,6 @@
 ########################################
 # Program: patmatmotifs
-# Rundate: Mon  6 Apr 2026 12:44:59
+# Rundate: Mon  6 Apr 2026 20:06:07
 # Commandline: patmatmotifs
 #    -sequence /tmp/bioinf_tmp/input.fasta
 #    -outfile /tmp/bioinf_tmp/motifs.txt
@@ -10,14 +10,54 @@
 
 #=======================================
 #
-# Sequence: seq_1     from: 1   to: 610
-# HitCount: 0
+# Sequence: seq_1     from: 1   to: 992
+# HitCount: 4
 #
 # Full: No
 # Prune: Yes
 # Data_file: /usr/share/EMBOSS/data/PROSITE/prosite.lines
 #
 #=======================================
+
+Length = 4
+Start = position 936 of sequence
+End = position 939 of sequence
+
+Motif = AMIDATION
+
+KLTPGTGKRGKAAK
+     |  |
+   936  939
+
+Length = 4
+Start = position 637 of sequence
+End = position 640 of sequence
+
+Motif = AMIDATION
+
+GSFMIRGKKNFLPS
+     |  |
+   637  640
+
+Length = 4
+Start = position 230 of sequence
+End = position 233 of sequence
+
+Motif = AMIDATION
+
+DKPEKGGKKQRKKQ
+     |  |
+   230  233
+
+Length = 8
+Start = position 269 of sequence
+End = position 276 of sequence
+
+Motif = ATP_GTP_A
+
+AQELIAEGNSGKSKGYII
+     |      |
+   269      276
 
 
 #---------------------------------------

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
+<!-- Page metadata and title -->
     <title>Processing...</title>
 
-    <!-- Global stylesheet -->
+<!-- Global stylesheet -->
     <link rel="stylesheet" href="style_sheet.css">
 
+<!-- Page specific styles for layout, progress UI, animations, and button styling -->
     <style>
         body {
             margin: 0;
@@ -13,6 +15,7 @@
             background: #f4f6f9;
         }
 
+        /* Main container to center the card */
         .container {
             display: flex;
             justify-content: center;
@@ -20,6 +23,7 @@
             height: 80vh;
         }
 
+        /* Card layout for processing UI */
         .card {
             background: white;
             padding: 40px;
@@ -33,13 +37,14 @@
             margin-bottom: 10px;
         }
 
+        /* Subtitle text under heading */
         .subtitle {
             color: #666;
             font-size: 14px;
             margin-bottom: 20px;
         }
 
-        /* Progress bar */
+        /* Progress bar container */
         .progress-bar {
             width: 100%;
             height: 8px;
@@ -49,6 +54,7 @@
             margin: 20px 0;
         }
 
+        /* Animated progress bar fill */
         .progress-bar-inner {
             height: 100%;
             width: 0%;
@@ -56,12 +62,13 @@
             transition: width 0.5s ease;
         }
 
-        /* Steps */
+        /* Steps container */
         .steps {
             text-align: left;
             margin-top: 20px;
         }
 
+        /* Individual step styling */
         .step {
             display: flex;
             align-items: center;
@@ -70,15 +77,18 @@
             transition: all 0.4s ease;
         }
 
+        /* Active step styling */
         .step.active {
             color: #6A1FD1;
             font-weight: bold;
         }
 
+        /* Completed step styling */
         .step.completed {
             color: #4b5563;
         }
 
+        /* Step indicator dot */
         .dot {
             width: 12px;
             height: 12px;
@@ -88,22 +98,25 @@
             transition: all 0.4s ease;
         }
 
+        /* Active step animation */
         .step.active .dot {
             background: #6A1FD1;
             animation: pulse 1s infinite;
         }
 
+        /* Completed step dot */
         .step.completed .dot {
             background: #6A1FD1;
         }
 
+        /* Pulsing animation for active step */
         @keyframes pulse {
             0% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.3); opacity: 0.6; }
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* Spinner */
+        /* Loading spinner */
         .spinner {
             margin: 15px auto;
             width: 35px;
@@ -114,30 +127,28 @@
             animation: spin 1s linear infinite;
         }
 
+        /* Spinner rotation animation */
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        /* ✅ Force purple button styling to match run_analysis.php */
+        /* Cancel button styled in purple */
         .cancel-btn {
             margin-top: 20px;
-
-            /* override any grey/default styling */
-            background-color: #4f46e5 !important;
-            color: white !important;
-
+            background-color: #6A1FD1;
+            color: white;
             padding: 10px 16px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-
             font-weight: 500;
             text-decoration: none;
             display: inline-block;
         }
 
+        /* Hover effect for cancel button */
         .cancel-btn:hover {
-            background-color: #4338ca !important;
+            background-color: #571bb0;
         }
 
     </style>
@@ -145,7 +156,7 @@
 
 <body>
 
-<!-- Navbar -->
+<!-- Navigation bar -->
 <div class="navbar">
     <a href="index.php">Home</a>
     <a href="aves.php">Example Dataset</a>
@@ -155,11 +166,15 @@
     <a href="help.php">Help</a>
 </div>
 
+<!-- Main container for processing UI -->
 <div class="container">
     <div class="card">
+
+        <!-- Page heading and description -->
         <h2>Processing Your Analysis</h2>
         <div class="subtitle">Please wait while we prepare your results</div>
 
+        <!-- Loading spinner -->
         <div class="spinner"></div>
 
         <!-- Progress bar -->
@@ -167,7 +182,7 @@
             <div class="progress-bar-inner" id="progressBar"></div>
         </div>
 
-        <!-- Steps -->
+        <!-- Step-by-step progress indicators -->
         <div class="steps">
             <div class="step" id="step1"><div class="dot"></div>Fetching NCBI data</div>
             <div class="step" id="step2"><div class="dot"></div>Parsing sequences</div>
@@ -175,15 +190,16 @@
             <div class="step" id="step4"><div class="dot"></div>Generating results</div>
         </div>
 
-        <!-- Cancel Button -->
+        <!-- Cancel button to stop processing -->
         <button class="cancel-btn" onclick="cancelJob()">Cancel Job</button>
 
     </div>
 </div>
 
-<!-- Hidden form -->
+<!-- Hidden form to forward POST data to run_analysis.php -->
 <form id="autoForm" method="POST" action="run_analysis.php">
     <?php
+    // Loop through submitted POST data and preserve values as hidden inputs
     foreach ($_POST as $key => $value) {
         if (is_array($value)) {
             foreach ($value as $v) {
@@ -197,8 +213,10 @@
 </form>
 
 <script>
+// Flag to track whether the job has been cancelled
 let cancelled = false;
 
+// Sends request to cancel the job and redirects user
 function cancelJob() {
     cancelled = true;
 
@@ -210,6 +228,7 @@ function cancelJob() {
     });
 }
 
+// Array of step elements for progress tracking
 const steps = [
     document.getElementById("step1"),
     document.getElementById("step2"),
@@ -217,10 +236,13 @@ const steps = [
     document.getElementById("step4")
 ];
 
+// Progress bar element
 const progressBar = document.getElementById("progressBar");
 
+// Tracks current step index
 let currentStep = 0;
 
+// Activates and updates each step visually
 function activateStep(index) {
     if (index < steps.length) {
         steps[index].classList.add("active");
@@ -234,6 +256,7 @@ function activateStep(index) {
     }
 }
 
+// Runs step animation and submits form when complete
 function runSteps() {
     const interval = setInterval(() => {
 
@@ -260,6 +283,7 @@ function runSteps() {
     }, 800);
 }
 
+// Start animation when page loads
 window.onload = runSteps;
 </script>
 

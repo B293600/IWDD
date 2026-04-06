@@ -1,53 +1,54 @@
-<?php
-require_once 'login.php';
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>About ProteinQuery</title>
+    <title>About</title>
 
-    <!-- Global stylesheet -->
+    <!-- Global stylesheet (contains navbar styling and shared styles) -->
     <link rel="stylesheet" href="style_sheet.css">
 
-    <!-- Page-specific styles -->
     <style>
-        .container {
-            padding: 40px;
+        body {
+            font-family: Arial, sans-serif;
             text-align: center;
+            margin: 0;
+            padding: 0;
         }
 
-        h2 {
-            margin-bottom: 20px;
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 40px 20px;
         }
 
-        h3 {
-            margin-top: 30px;
-            margin-bottom: 10px;
+        h2, h3 {
+            margin-bottom: 15px;
         }
 
         p {
-            max-width: 800px;
-            margin: 0 auto 15px auto;
             line-height: 1.6;
+            margin-bottom: 20px;
         }
 
         ul {
-            display: inline-block;
-            text-align: left;
-            margin-top: 10px;
+            list-style-position: inside;
+            padding: 0;
+            margin-bottom: 20px;
         }
 
         li {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 40px;
         }
     </style>
 </head>
 
 <body>
 
-<!-- Navbar -->
+<!-- Navigation bar (styled via global stylesheet only) -->
 <div class="navbar">
     <a href="index.php">Home</a>
     <a href="aves.php">Example Dataset</a>
@@ -59,34 +60,82 @@ require_once 'login.php';
 
 <div class="container">
 
-    <h2>About ProteinQuery</h2>
+    <h2>About This Website</h2>
 
-    <h3>Overview</h3>
-    <p>
-        ProteinQuery is a web-based platform designed for the retrieval and analysis of protein sequences
-        across different taxonomic groups using keyword-based searches.
-    </p>
+    <!-- Overview -->
+    <div class="section">
+        <h3>Overview</h3>
+        <p>
+            This website is designed to support biological sequence analysis.
+            It allows users to select or search for datasets, perform comparisons and interpret similarity results through a structured user interface.
+        </p>
+    </div>
 
-    <h3>Purpose</h3>
-    <p>
-        The purpose of this tool is to provide users with an accessible interface to explore amino acid
-        sequences and perform common bioinformatics analyses.
-    </p>
+    <!-- Architecture -->
+    <div class="section">
+        <h3>System Architecture</h3>
+        <p>
+            The website has a multi-page structure where each page is responsible for a specific part of the workflow, including data input, analysis, results and documentation.
+        </p>
+        <p>
+            A consistent navigation system is used across all pages to allow users to move easily between different sections of the application.
+        </p>
+    </div>
 
-    <h3>Features</h3>
-    <ul>
-        <li>Protein sequence retrieval using keywords</li>
-        <li>Taxonomy-based filtering</li>
-        <li>Multiple sequence alignment</li>
-        <li>Sequence length analysis</li>
-        <li>Motif detection</li>
-    </ul>
+    <!-- Data handling -->
+    <div class="section">
+        <h3>Data Handling</h3>
+        <p>
+            Sequence data can be provided either by user input or selected from the example dataset.
+            The website prepares and processes this data to ensure it is suitable for comparison.
+        </p>
+        <p>
+            Input validation is used to maintain data quality and ensure that only properly formatted sequences are processed.
+        </p>
+    </div>
 
-    <h3>How It Works</h3>
-    <p>
-        Users can navigate to the input page, select or upload datasets, and choose the desired analysis tools.
-        The results are then processed and displayed for interpretation.
-    </p>
+    <!-- Processing -->
+    <div class="section">
+        <h3>Processing and Analysis</h3>
+        <p>
+            The core functionality of the system is to compare biological sequences and identify similarities between them.
+            These comparisons generate biologically meaningful results.
+        </p>
+        <p>
+            The results display alignment patterns and similarity relationships that can be used to support further interpretation.
+        </p>
+    </div>
+
+    <!-- Front-end -->
+    <div class="section">
+        <h3>Front-End Design</h3>
+        <p>
+            The interface is designed to be clear, structured and user-friendly.
+            Visual elements are arranged to present information in a readable and consistent manner.
+        </p>
+        <p>
+            Styling is applied uniformly across the application using a global style sheet to maintain a cohesive appearance. 
+            Animation and cards are implemented where relevant to improve the appearance.
+        </p>
+    </div>
+
+    <!-- Navigation -->
+    <div class="section">
+        <h3>Navigation</h3>
+        <p>
+            A shared navigation bar is present on all pages to provide quick access to the main sections of the website.
+            This ensures a consistent user experience throughout.
+        </p>
+    </div>
+
+    <!-- Summary -->
+    <div class="section">
+        <h3>Summary</h3>
+        <p>
+            This website brings together sequence data handling, user interaction and result presentation within a structured web interface.
+            It is designed to provide a clear and accessible environment for biological sequence analysis.
+        </p>
+    </div>
 
 </div>
 

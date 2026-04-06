@@ -153,7 +153,7 @@ session_start();
             ?>
         </h1>
 
-        <p>Analyse, visualise, and explore protein sequences.</p>
+        <p>Analyse, visualise and explore protein sequences.</p>
 
         <!-- Button that directs user to the analysis input page -->
         <form action="analysis_UI.php" method="get">
@@ -179,7 +179,7 @@ session_start();
 
     <div class="card">
         <h3>Example Dataset</h3>
-        <p>Explore the example dataset of Glucose-6-phosphatase proteins from Aves</p>
+        <p>Explore the example dataset of Glucose-6-phosphatase proteins from Aves.</p>
     </div>
 
     <div class="card">
