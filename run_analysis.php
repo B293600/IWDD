@@ -35,6 +35,12 @@ if (!is_array($analyses)) $analyses = [$analyses];
 $analyses = array_map('strtolower', $analyses);
 
 // ---------------------------
+// UI FLAGS
+// ---------------------------
+$newDatasetCreated = false;
+$newJobId = null;
+
+// ---------------------------
 // LOAD SEQUENCES
 // ---------------------------
 $sequences = [];
@@ -45,7 +51,9 @@ if ($mode === 'existing') {
         $stmt = $pdo->query("SELECT sequence FROM aves_g6p");
         $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
     } elseif ($dataset === 'user') {
+
         if (empty($job_id)) die("Error: Job ID required.");
+
         $stmt = $pdo->prepare("SELECT sequence FROM sequences WHERE job_id = ?");
         $stmt->execute([$job_id]);
         $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -62,6 +70,9 @@ if ($mode === 'existing') {
     }
 
     $job_id = uniqid("job_");
+    $newJobId = $job_id;
+    $newDatasetCreated = true;
+
     $query = urlencode("$protein AND $taxon");
 
     $esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
@@ -99,9 +110,9 @@ if ($mode === 'existing') {
     if ($seq !== "") $sequences[] = $seq;
 
     $stmt = $pdo->prepare("INSERT INTO sequences (dataset, job_id, sequence) VALUES (?, ?, ?)");
-    foreach ($sequences as $s) $stmt->execute([$protein, $job_id, $s]);
-
-    echo "<p><strong>New dataset created.</strong><br>Job ID: $job_id</p>";
+    foreach ($sequences as $s) {
+        $stmt->execute([$protein, $job_id, $s]);
+    }
 }
 
 // ---------------------------
@@ -110,19 +121,23 @@ if ($mode === 'existing') {
 if (empty($sequences)) die("Error: No sequences available.");
 
 // ---------------------------
-// WRITE FASTA
+// WRITE FASTA INPUT
 // ---------------------------
 $inputFile = $workDir . "/input.fasta";
-$fh = fopen($inputFile, "w");
 
+$fh = fopen($inputFile, "w");
 foreach ($sequences as $i => $seq) {
     fwrite($fh, ">seq_" . ($i + 1) . "\n");
     fwrite($fh, wordwrap($seq, 60, "\n", true) . "\n");
 }
 fclose($fh);
 
+if (!file_exists($inputFile)) {
+    die("Error: Failed to create input FASTA.");
+}
+
 // ---------------------------
-// ALIGNMENT CACHE FUNCTION
+// ALIGNMENT FUNCTION
 // ---------------------------
 function getExampleAlignment($pdo, $workDir, $webTmp) {
 
@@ -171,29 +186,48 @@ function getExampleAlignment($pdo, $workDir, $webTmp) {
 <title>Analysis Results</title>
 
 <style>
+/* 🌤 LIGHT THEME */
 body {
+    font-family: Arial;
     margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f4f6f9;
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    color: #1f2937;
 }
 
 .container {
-    max-width: 1100px;
-    margin: 40px auto;
-    background: white;
-    padding: 35px;
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    max-width:1100px;
+    margin:40px auto;
+    background: #ffffff;
+    padding:35px;
+    border-radius:12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
 }
 
+/* HEADINGS */
 h2 {
-    color: #5b21b6;
+    color: #4f46e5;
+    border-bottom: 2px solid #c7d2fe;
+    padding-bottom: 8px;
 }
 
 h3 {
-    color: #6d28d9;
+    color: #4338ca;
+    margin-top: 25px;
+    border-left: 4px solid #6366f1;
+    padding-left: 10px;
 }
 
+/* PRE BLOCKS */
+pre {
+    background: #f1f5f9;
+    color: #111827;
+    padding: 15px;
+    border-radius: 8px;
+    overflow-x: auto;
+    border-left: 4px solid #6366f1;
+}
+
+/* BUTTONS (UNCHANGED FUNCTIONALLY) */
 .button-group {
     margin: 20px 0;
     display: flex;
@@ -201,68 +235,48 @@ h3 {
     gap: 10px;
 }
 
-.nav-btn {
-    padding: 10px 16px;
-    background: #6d28d9;
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
+.nav-btn, .copy-btn, .back-btn {
+    padding:10px 16px;
+    background:#4f46e5;
+    color:white;
+    border-radius:8px;
+    text-decoration:none;
+    border:none;
+    cursor:pointer;
 }
 
-.nav-btn:hover {
-    background: #5b21b6;
+.nav-btn:hover, .copy-btn:hover, .back-btn:hover {
+    background:#4338ca;
 }
 
-.back-btn {
-    display: inline-block;
-    padding: 10px 18px;
-    background: #7c3aed;
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
-    margin-bottom: 15px;
-}
-
-.back-btn:hover {
-    background: #6d28d9;
-}
-
-pre {
-    background: #f8fafc;
-    padding: 15px;
-    border-radius: 8px;
-    overflow-x: auto;
-    border-left: 4px solid #7c3aed;
-}
-
-hr {
-    border: none;
-    border-top: 1px solid #e5e7eb;
-    margin: 30px 0;
-}
-
-/* UPDATED BUTTON STYLE */
+/* BACK TO TOP */
 .back-to-top {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    background: #7c3aed;
-    color: white;
-    padding: 16px 22px;
-    border-radius: 999px;
-    text-decoration: none;
-    font-size: 18px;
-    font-weight: 700;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-    transition: 0.2s ease;
+    position:fixed;
+    bottom:25px;
+    right:25px;
+    background:#4f46e5;
+    color:white;
+    padding:22px 28px;
+    border-radius:999px;
+    text-decoration:none;
+    font-size:22px;
+    font-weight:700;
+    box-shadow:0 6px 16px rgba(0,0,0,0.15);
+    transition:0.2s ease;
 }
 
 .back-to-top:hover {
-    background: #5b21b6;
+    background:#4338ca;
     transform: translateY(-3px);
 }
-
 </style>
+
+<script>
+function copyJobId(id) {
+    navigator.clipboard.writeText(id);
+    alert("Job ID copied!");
+}
+</script>
 
 </head>
 
@@ -273,7 +287,17 @@ hr {
 <h2 id="top">Analysis Results</h2>
 <p><strong>Sequences:</strong> <?= count($sequences) ?></p>
 
-<a href="analysis_UI.php" class="back-btn">← Back to Analysis</a>
+<?php if ($newDatasetCreated): ?>
+    <p><strong>New dataset created.</strong></p>
+    <p>
+        <strong>Job ID:</strong> <?= htmlspecialchars($newJobId) ?>
+        <button class="copy-btn" onclick="copyJobId('<?= htmlspecialchars($newJobId) ?>')">
+            Copy Job ID
+        </button>
+    </p>
+<?php endif; ?>
+
+<a href="analysis_UI.php" class="back-btn">← Back</a>
 
 <div class="button-group">
 <?php foreach ($analyses as $analysis): ?>
@@ -304,22 +328,21 @@ foreach ($analyses as $analysis) {
                        " --force --threads=4 --iterations=1 2>&1";
 
                 $output = shell_exec($cmd);
+
+                if (!file_exists($alignedFile)) {
+                    echo "<p>Alignment failed.</p><pre>$output</pre>";
+                    break;
+                }
             }
 
-            if (file_exists($alignedFile)) {
-                $currentAlignmentFile = $alignedFile;
-                echo "<pre>" . htmlspecialchars(file_get_contents($alignedFile)) . "</pre>";
-            } else {
-                echo "<p>Alignment failed.</p>";
-                echo "<pre>$output</pre>";
-            }
-
+            $currentAlignmentFile = $alignedFile;
+            echo "<pre>" . htmlspecialchars(file_get_contents($alignedFile)) . "</pre>";
             break;
 
         case 'conservation':
 
             if (!$currentAlignmentFile || !file_exists($currentAlignmentFile)) {
-                echo "<p>Error: alignment must be run first.</p>";
+                echo "<p>Error: Alignment must be run first.</p>";
                 break;
             }
 
@@ -330,7 +353,7 @@ foreach ($analyses as $analysis) {
                    " -graph png -goutfile " . escapeshellarg($plotTemp) .
                    " -winsize 4 -auto 2>&1";
 
-            $output = shell_exec($cmd);
+            shell_exec($cmd);
 
             $files = glob($workDir . "/plotcon*.png");
 
@@ -339,7 +362,6 @@ foreach ($analyses as $analysis) {
                 echo "<img src='tmp/plotcon.png?" . time() . "'>";
             } else {
                 echo "<p>Conservation plot failed.</p>";
-                echo "<pre>$output</pre>";
             }
 
             break;
@@ -352,20 +374,18 @@ foreach ($analyses as $analysis) {
             $cmd = "/usr/bin/patmatmotifs -sequence " . escapeshellarg($inputFile) .
                    " -outfile " . escapeshellarg($motifTemp) . " 2>&1";
 
-            $output = shell_exec($cmd);
+            shell_exec($cmd);
 
             if (file_exists($motifTemp)) {
                 copy($motifTemp, $motifWeb);
                 echo "<pre>" . htmlspecialchars(file_get_contents($motifWeb)) . "</pre>";
             } else {
                 echo "<p>Motif scan failed.</p>";
-                echo "<pre>$output</pre>";
             }
 
             break;
 
         case 'length':
-
             $lengths = array_map('strlen', $sequences);
             echo "<p>Average: " . round(array_sum($lengths)/count($lengths),2) . "</p>";
             echo "<p>Min: " . min($lengths) . "</p>";
@@ -377,7 +397,7 @@ foreach ($analyses as $analysis) {
 ?>
 
 <br><br>
-<a href="analysis_UI.php" class="back-btn">← Back to Analysis</a>
+<a href="analysis_UI.php" class="back-btn">← Back</a>
 
 <a href="#top" class="back-to-top">↑ Top</a>
 
