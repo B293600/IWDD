@@ -1,35 +1,42 @@
 <?php
-
+// Start session handling for storing user inputs across requests
 session_start();
 
+// Enable full error reporting for debugging purposes
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Include database connection credentials and PDO setup
 require_once 'login.php';
 
 // ---------------------------
 // STORE LAST INPUTS IN SESSION
 // ---------------------------
+// Save POST data so the form can be repopulated later
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['analysis_form'] = $_POST;
 }
 
 // ---------------------------
-// CONFIG
+// CONFIGURATION
 // ---------------------------
+// Define working directories for temporary files
 $workDir = sys_get_temp_dir() . "/bioinf_tmp";
 $webTmp  = __DIR__ . "/tmp";
 
+// Create directories if they do not already exist
 if (!is_dir($workDir)) mkdir($workDir, 0777, true);
 if (!is_dir($webTmp)) mkdir($webTmp, 0777, true);
 
 // ---------------------------
-// INPUTS
+// INPUT PARAMETERS
 // ---------------------------
+// Retrieve form inputs with fallback defaults
 $mode    = $_POST['mode'] ?? '';
 $dataset = $_POST['dataset'] ?? null;
 $job_id  = $_POST['job_id'] ?? null;
 
+// Retrieve selected analyses and ensure array format
 $analyses = $_POST['analysis'] ?? [];
 if (!is_array($analyses)) $analyses = [$analyses];
 $analyses = array_map('strtolower', $analyses);
@@ -43,15 +50,21 @@ $newJobId = null;
 // ---------------------------
 // LOAD SEQUENCES
 // ---------------------------
+// Initialise sequence storage
 $sequences = [];
 
+// Handle existing dataset mode
 if ($mode === 'existing') {
 
+    // Load example dataset from database
     if ($dataset === 'example') {
         $stmt = $pdo->query("SELECT sequence FROM aves_g6p");
         $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    } elseif ($dataset === 'user') {
+    }
+    // Load user dataset using job ID
+    elseif ($dataset === 'user') {
 
+        // Validate job ID input
         if (empty($job_id)) die("Error: Job ID required.");
 
         $stmt = $pdo->prepare("SELECT sequence FROM sequences WHERE job_id = ?");
@@ -61,35 +74,45 @@ if ($mode === 'existing') {
 
 } elseif ($mode === 'new') {
 
+    // Retrieve query parameters for new dataset
     $protein = $_POST['protein_query'] ?? '';
     $taxon   = $_POST['taxon_query'] ?? '';
     $max_seq = $_POST['max_seq'] ?? 50;
 
+    // Validate required inputs
     if (empty($protein) || empty($taxon)) {
         die("Error: Protein and taxon required.");
     }
 
+    // Generate unique job identifier
     $job_id = uniqid("job_");
     $newJobId = $job_id;
     $newDatasetCreated = true;
 
+    // Build NCBI query string
     $query = urlencode("$protein AND $taxon");
 
+    // Construct ESearch URL
     $esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
         . "db=protein&term=$query&retmax=$max_seq&retmode=json";
 
+    // Fetch search results
     $esearch = json_decode(file_get_contents($esearch_url), true);
     $ids = $esearch['esearchresult']['idlist'] ?? [];
 
+    // Ensure sequences were found
     if (empty($ids)) die("Error: No sequences found.");
 
+    // Construct EFetch URL to retrieve FASTA sequences
     $efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?"
         . "db=protein&id=" . implode(",", $ids)
         . "&rettype=fasta&retmode=text";
 
+    // Retrieve FASTA data
     $fasta = file_get_contents($efetch_url);
     if (!$fasta) die("Error fetching FASTA.");
 
+    // Parse FASTA into individual sequences
     $lines = explode("\n", $fasta);
     $seq = "";
 
@@ -109,6 +132,7 @@ if ($mode === 'existing') {
 
     if ($seq !== "") $sequences[] = $seq;
 
+    // Store sequences in database
     $stmt = $pdo->prepare("INSERT INTO sequences (dataset, job_id, sequence) VALUES (?, ?, ?)");
     foreach ($sequences as $s) {
         $stmt->execute([$protein, $job_id, $s]);
@@ -118,11 +142,13 @@ if ($mode === 'existing') {
 // ---------------------------
 // VALIDATION
 // ---------------------------
+// Ensure sequences exist before proceeding
 if (empty($sequences)) die("Error: No sequences available.");
 
 // ---------------------------
-// WRITE FASTA INPUT
+// WRITE FASTA INPUT FILE
 // ---------------------------
+// Create input FASTA file for downstream tools
 $inputFile = $workDir . "/input.fasta";
 
 $fh = fopen($inputFile, "w");
@@ -132,6 +158,7 @@ foreach ($sequences as $i => $seq) {
 }
 fclose($fh);
 
+// Verify file creation
 if (!file_exists($inputFile)) {
     die("Error: Failed to create input FASTA.");
 }
@@ -139,20 +166,24 @@ if (!file_exists($inputFile)) {
 // ---------------------------
 // ALIGNMENT FUNCTION
 // ---------------------------
+// Generates or retrieves a cached alignment for example dataset
 function getExampleAlignment($pdo, $workDir, $webTmp) {
 
     $alignedFile = $webTmp . "/aligned_example.fasta";
 
+    // Return cached alignment if available
     if (file_exists($alignedFile) && filesize($alignedFile) > 0) {
         return $alignedFile;
     }
 
+    // Fetch example sequences from database
     $stmt = $pdo->query("SELECT sequence FROM aves_g6p");
     $sequences = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     $inputFile   = $workDir . "/example_input.fasta";
     $tempAligned = $workDir . "/example_aligned.fasta";
 
+    // Write FASTA input
     $fh = fopen($inputFile, "w");
 
     foreach ($sequences as $i => $seq) {
@@ -162,16 +193,19 @@ function getExampleAlignment($pdo, $workDir, $webTmp) {
 
     fclose($fh);
 
+    // Run Clustal Omega alignment
     $cmd = "/usr/bin/clustalo -i " . escapeshellarg($inputFile) .
            " -o " . escapeshellarg($tempAligned) .
            " --force --threads=4 --iterations=1 2>&1";
 
     shell_exec($cmd);
 
+    // Validate output
     if (!file_exists($tempAligned)) {
         die("Error: Failed to generate example alignment.");
     }
 
+    // Copy to web-accessible directory
     copy($tempAligned, $alignedFile);
 
     return $alignedFile;
@@ -182,11 +216,12 @@ function getExampleAlignment($pdo, $workDir, $webTmp) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Page metadata and title -->
 <meta charset="UTF-8">
 <title>Analysis Results</title>
 
+<!-- Page styling for layout, headings, buttons, and output formatting -->
 <style>
-/* 🌤 LIGHT THEME */
 body {
     font-family: Arial;
     margin: 0;
@@ -203,7 +238,6 @@ body {
     box-shadow: 0 8px 25px rgba(0,0,0,0.08);
 }
 
-/* HEADINGS */
 h2 {
     color: #4f46e5;
     border-bottom: 2px solid #c7d2fe;
@@ -217,7 +251,6 @@ h3 {
     padding-left: 10px;
 }
 
-/* PRE BLOCKS */
 pre {
     background: #f1f5f9;
     color: #111827;
@@ -227,7 +260,6 @@ pre {
     border-left: 4px solid #6366f1;
 }
 
-/* BUTTONS (UNCHANGED FUNCTIONALLY) */
 .button-group {
     margin: 20px 0;
     display: flex;
@@ -249,7 +281,6 @@ pre {
     background:#4338ca;
 }
 
-/* BACK TO TOP */
 .back-to-top {
     position:fixed;
     bottom:25px;
@@ -262,7 +293,6 @@ pre {
     font-size:22px;
     font-weight:700;
     box-shadow:0 6px 16px rgba(0,0,0,0.15);
-    transition:0.2s ease;
 }
 
 .back-to-top:hover {
@@ -272,6 +302,7 @@ pre {
 </style>
 
 <script>
+// Copy Job ID to clipboard
 function copyJobId(id) {
     navigator.clipboard.writeText(id);
     alert("Job ID copied!");
@@ -282,6 +313,7 @@ function copyJobId(id) {
 
 <body>
 
+<!-- Main container for results -->
 <div class="container">
 
 <h2 id="top">Analysis Results</h2>
@@ -306,6 +338,7 @@ function copyJobId(id) {
 </div>
 
 <?php
+// Iterate through selected analyses and execute each one
 
 $currentAlignmentFile = null;
 
@@ -317,18 +350,21 @@ foreach ($analyses as $analysis) {
 
         case 'alignment':
 
+            // Use cached example alignment if applicable
             if ($mode === 'existing' && $dataset === 'example') {
                 $alignedFile = getExampleAlignment($pdo, $workDir, $webTmp);
                 echo "<p>Using cached example alignment.</p>";
             } else {
                 $alignedFile = $workDir . "/aligned.fasta";
 
+                // Run Clustal Omega alignment
                 $cmd = "/usr/bin/clustalo -i " . escapeshellarg($inputFile) .
                        " -o " . escapeshellarg($alignedFile) .
                        " --force --threads=4 --iterations=1 2>&1";
 
                 $output = shell_exec($cmd);
 
+                // Validate alignment output
                 if (!file_exists($alignedFile)) {
                     echo "<p>Alignment failed.</p><pre>$output</pre>";
                     break;
@@ -341,6 +377,7 @@ foreach ($analyses as $analysis) {
 
         case 'conservation':
 
+            // Ensure alignment exists before plotting conservation
             if (!$currentAlignmentFile || !file_exists($currentAlignmentFile)) {
                 echo "<p>Error: Alignment must be run first.</p>";
                 break;
@@ -349,6 +386,7 @@ foreach ($analyses as $analysis) {
             $plotTemp = $workDir . "/plotcon";
             $plotWeb  = $webTmp . "/plotcon.png";
 
+            // Generate conservation plot using EMBOSS tool
             $cmd = "/usr/bin/plotcon -sequence " . escapeshellarg($currentAlignmentFile) .
                    " -graph png -goutfile " . escapeshellarg($plotTemp) .
                    " -winsize 4 -auto 2>&1";
@@ -368,6 +406,7 @@ foreach ($analyses as $analysis) {
 
         case 'motifs':
 
+            // Run motif scanning tool
             $motifTemp = $workDir . "/motifs.txt";
             $motifWeb  = $webTmp . "/motifs.txt";
 
@@ -386,6 +425,8 @@ foreach ($analyses as $analysis) {
             break;
 
         case 'length':
+
+            // Compute sequence length statistics
             $lengths = array_map('strlen', $sequences);
             echo "<p>Average: " . round(array_sum($lengths)/count($lengths),2) . "</p>";
             echo "<p>Min: " . min($lengths) . "</p>";
@@ -393,7 +434,6 @@ foreach ($analyses as $analysis) {
             break;
     }
 }
-
 ?>
 
 <br><br>
