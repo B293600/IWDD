@@ -103,7 +103,7 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* Spinner accent */
+        /* Spinner */
         .spinner {
             margin: 15px auto;
             width: 35px;
@@ -118,20 +118,26 @@
             to { transform: rotate(360deg); }
         }
 
-        /* ✅ Cancel button */
+        /* ✅ Force purple button styling to match run_analysis.php */
         .cancel-btn {
             margin-top: 20px;
+
+            /* override any grey/default styling */
+            background-color: #4f46e5 !important;
+            color: white !important;
+
             padding: 10px 16px;
-            background: #ef4444;
-            color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
+
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
         }
 
         .cancel-btn:hover {
-            background: #dc2626;
+            background-color: #4338ca !important;
         }
 
     </style>
@@ -169,7 +175,7 @@
             <div class="step" id="step4"><div class="dot"></div>Generating results</div>
         </div>
 
-        <!-- ✅ Cancel Button -->
+        <!-- Cancel Button -->
         <button class="cancel-btn" onclick="cancelJob()">Cancel Job</button>
 
     </div>
