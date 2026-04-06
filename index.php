@@ -16,6 +16,7 @@ session_start();
             scroll-behavior: smooth;
         }
 
+        /* Adds hero image */
         .hero {
             height: 65vh;
             background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
@@ -27,6 +28,7 @@ session_start();
             text-align: center;
         }
 
+        /* Adds fading animation */
         .hero-content {
             animation: fadeIn 1.5s ease-in-out;
         }
@@ -65,6 +67,7 @@ session_start();
             transition: transform 0.3s;
         }
 
+        /* Adds card animation */
         .card:hover {
             transform: translateY(-10px);
         }
@@ -152,6 +155,7 @@ session_start();
 
         <p>Analyse, visualise, and explore protein sequences.</p>
 
+        <!-- Button that directs user to the analysis input page -->
         <form action="analysis_UI.php" method="get">
             <button type="submit" class="btn hero-button">Start Analysis</button>
         </form>

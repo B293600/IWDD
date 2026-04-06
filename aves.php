@@ -1,17 +1,19 @@
 <?php
+// MySQL Database login with PDO
 require_once 'login.php';
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Page metadata and title -->
     <meta charset="UTF-8">
     <title>Glucose-6-phosphatase (Aves)</title>
 
-    <!-- Global stylesheet -->
+<!-- Global stylesheet -->
     <link rel="stylesheet" href="style_sheet.css">
 
-    <!-- Page-specific styles -->
+<!-- Page specific styles, for container, headings, table formatting and error messages -->
     <style>
         .container {
             padding: 40px;
@@ -22,7 +24,6 @@ require_once 'login.php';
             margin-bottom: 20px;
         }
 
-        /* Table styling */
         table {
             margin: 0 auto;
             border-collapse: collapse;
@@ -48,7 +49,6 @@ require_once 'login.php';
             background: #f2f2f2;
         }
 
-        /* Changed hover color to purple */
         tr:hover {
             background: #e9d5ff;
         }
@@ -62,7 +62,7 @@ require_once 'login.php';
 
 <body>
 
-<!-- Navbar -->
+<!-- Navigation Bar -->
 <div class="navbar">
     <a href="index.php">Home</a>
     <a href="aves.php">Example Dataset</a>
@@ -72,14 +72,18 @@ require_once 'login.php';
     <a href="help.php">Help</a>
 </div>
 
+<!-- Main content container to display the dataset -->
 <div class="container">
 
 <?php
+// Attempts to query the database to retrieve certain attributes from the aves_g6p table
 try {
     $stmt = $pdo->query("SELECT accession, description, length FROM aves_g6p");
 
+    // Displays the page heading
     echo "<h2>Example: Glucose-6-phosphatase (Aves)</h2>";
 
+    // Start HTML table and define column headers
     echo "<table>";
     echo "<tr>
             <th>Accession</th>
@@ -87,6 +91,7 @@ try {
             <th>Length</th>
           </tr>";
 
+    // Loop through each row returned from the database and display it in the table
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         echo "<tr>";
         echo "<td>" . htmlspecialchars($row['accession']) . "</td>";
@@ -95,13 +100,14 @@ try {
         echo "</tr>";
     }
 
+    // Close the table
     echo "</table>";
 
+    // Display error message if database query fails
 } catch (PDOException $e) {
     echo "<p class='error'>Database error: " . htmlspecialchars($e->getMessage()) . "</p>";
 }
 ?>
-
 </div>
 
 </body>

@@ -1,19 +1,22 @@
 <?php
+// Start session and retrieve any previously saved form data
 session_start();
-
+// Sets default mode
 $saved = $_SESSION['analysis_form'] ?? [];
-$mode = $saved['mode'] ?? 'existing'; // default mode
+$mode = $saved['mode'] ?? 'existing'; 
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Page metadata and title -->
     <meta charset="UTF-8">
     <title>Protein Sequence Analysis</title>
 
-    <!-- Global stylesheet -->
+<!-- Global stylesheet -->
     <link rel="stylesheet" href="style_sheet.css">
 
+<!-- Page specific styles for layout, form design and response -->
     <style>
         body {
             margin: 0;
@@ -84,7 +87,7 @@ $mode = $saved['mode'] ?? 'existing'; // default mode
 
 <body>
 
-<!-- Navbar -->
+<!-- Navigation bar -->
 <div class="navbar">
     <a href="index.php">Home</a>
     <a href="aves.php">Example Dataset</a>
@@ -94,14 +97,17 @@ $mode = $saved['mode'] ?? 'existing'; // default mode
     <a href="help.php">Help</a>
 </div>
 
+<!-- Main container for the form card -->
 <div class="container">
 <div class="card">
 
+<!-- Page heading -->
 <h2>Protein Sequence Analysis</h2>
 
+<!-- Form submission to loading.php for processing -->
 <form action="loading.php" method="POST">
 
-    <!-- Mode Selection -->
+    <!-- Section for selecting analysis mode -->
     <div class="section">
         <h3>Select Mode</h3>
         <select name="mode" id="modeSelect" onchange="toggleMode()" required>
@@ -114,7 +120,7 @@ $mode = $saved['mode'] ?? 'existing'; // default mode
         </select>
     </div>
 
-    <!-- Existing Dataset -->
+    <!-- Section for selecting an existing dataset -->
     <div id="existingSection" class="section"
          style="display: <?= $mode === 'existing' ? 'block' : 'none' ?>;">
 
@@ -129,6 +135,7 @@ $mode = $saved['mode'] ?? 'existing'; // default mode
             </option>
         </select>
 
+        <!-- Input field for user dataset Job ID -->
         <div id="jobInput" style="display: <?= ($saved['dataset'] ?? '') === 'user' ? 'block' : 'none' ?>;">
             <input type="text" name="job_id"
                    value="<?= htmlspecialchars($saved['job_id'] ?? '') ?>"
@@ -137,7 +144,7 @@ $mode = $saved['mode'] ?? 'existing'; // default mode
 
     </div>
 
-    <!-- New Dataset -->
+    <!-- Section for creating a new dataset via NCBI query -->
     <div id="newSection" class="section"
          style="display: <?= $mode === 'new' ? 'block' : 'none' ?>;">
 
@@ -165,7 +172,7 @@ $mode = $saved['mode'] ?? 'existing'; // default mode
 
     </div>
 
-    <!-- Analysis Options -->
+    <!-- Section for selecting analysis options -->
     <div class="section">
         <h3>Select Analyses</h3>
 
@@ -196,6 +203,7 @@ $mode = $saved['mode'] ?? 'existing'; // default mode
         </label>
     </div>
 
+    <!-- Submit button to run analysis -->
     <button type="submit" class="btn">Run Analysis</button>
 
 </form>
@@ -203,6 +211,7 @@ $mode = $saved['mode'] ?? 'existing'; // default mode
 </div>
 </div>
 
+<!-- JavaScript for toggling between dataset modes and input visibility -->
 <script>
 function toggleMode() {
     var mode = document.getElementById("modeSelect").value;
@@ -221,7 +230,7 @@ function toggleMode() {
     jobInput.style.display = "none";
 }
 
-// Toggle job input
+// Toggle job input visibility when dataset selection changes
 document.querySelector('select[name="dataset"]').addEventListener("change", function() {
     var jobInput = document.getElementById("jobInput");
     jobInput.style.display = (this.value === "user") ? "block" : "none";
