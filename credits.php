@@ -181,7 +181,7 @@ require_once 'login.php';
     </p>
 
     <p>
-        The tool was also used to assist in adapting and modifying existing code obtained from external resources. It was used when there were difficulties implementing certain features, particularly the loading page animation.
+        The tool was also used to assist in adapting and modifying existing code obtained from external resources. It was used when there were difficulties implementing certain features, particularly the loading page animation and helping with implementing job ID to save searches.
     </p>
 
 </div>
